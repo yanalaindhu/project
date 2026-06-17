@@ -3,12 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers import auth
 from routers import checkins
-
 from routers import dashboard
 from routers import goals
 from routers import habits
 from routers import schedules
-from routers import onboarding
+
 app = FastAPI(
     title="TRIVARNA API"
 )
