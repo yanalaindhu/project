@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str
 
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY:str = "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"
 
     DEBUG: bool = True
 
