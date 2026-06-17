@@ -400,3 +400,35 @@ Includes:
 * `/dashboard`: Renders standard account dashboard summary with details of user's active goals and an onboarding reset action.
 * Default redirects point directly to `/onboarding`.
 
+---
+
+## 🏃 How to Run the Onboarding Frontend Separately
+
+To run, inspect, or build the **Onboarding Flow** module in isolation from the rest of the application, follow these steps:
+
+### Option A: Route-Based Separation (Standard Dev Server)
+The standard way to access the Onboarding experience independently is using the development server router:
+1. Start the frontend development server if not already running:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+2. Navigate directly to the onboarding route in your browser:
+   * **URL**: [http://localhost:3000/onboarding](http://localhost:3000/onboarding)
+
+### Option B: Standalone Component Isolation (App Entrypoint)
+If you want to render **only** the Onboarding module on the port (completely bypassing the AppRoutes router, navigation headers, and chatbot dependencies):
+1. Open [App.jsx](file:///c:/Users/bsais/OneDrive/Desktop/aiml-ds/week%2022/project/frontend/src/App.jsx).
+2. Modify the file to mount the Onboarding coordinator directly:
+   ```javascript
+   import React from 'react';
+   import Onboarding from './pages/onboarding/Onboarding';
+   import './styles/index.css';
+
+   export default function App() {
+     return <Onboarding />;
+   }
+   ```
+3. Run `npm run dev`. The server at `http://localhost:3000` will load the Onboarding steps as the root page.
+
+

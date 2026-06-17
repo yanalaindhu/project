@@ -102,7 +102,7 @@ export const onboardingService = {
 
         // --- AI Coach Insight Generator ---
         let summaryText = "";
-        const roleStr = data.lifeContext?.role?.replace('_', ' ') || "individual";
+        const roleStr = data.lifeContext?.occupation?.replace('_', ' ') || "individual";
         const focusWindow = data.productiveWindow || "Morning";
 
         if (burnoutRisk === "High") {

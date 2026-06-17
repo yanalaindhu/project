@@ -6,7 +6,6 @@ import ProgressStepper from '../../components/onboarding/ProgressStepper';
 // Import step components
 import WelcomeStep from './WelcomeStep';
 import LifeContextStep from './LifeContextStep';
-import EmotionStep from './EmotionStep';
 import WellbeingDriversStep from './WellbeingDriversStep';
 import StressAssessmentStep from './StressAssessmentStep';
 import BodyAssessmentStep from './BodyAssessmentStep';
@@ -25,7 +24,7 @@ export default function Onboarding() {
   const { currentStep, nextStep, prevStep } = useOnboardingStore();
 
   const handleNext = () => {
-    if (currentStep === 13) {
+    if (currentStep === 12) {
       // Direct user to dashboard on completion of AI Plan
       navigate('/dashboard');
     } else {
@@ -45,34 +44,32 @@ export default function Onboarding() {
       case 2:
         return <LifeContextStep onNext={handleNext} onBack={handleBack} />;
       case 3:
-        return <EmotionStep onNext={handleNext} onBack={handleBack} />;
-      case 4:
         return <WellbeingDriversStep onNext={handleNext} onBack={handleBack} />;
-      case 5:
+      case 4:
         return <StressAssessmentStep onNext={handleNext} onBack={handleBack} />;
-      case 6:
+      case 5:
         return <BodyAssessmentStep onNext={handleNext} onBack={handleBack} />;
-      case 7:
+      case 6:
         return <ProductiveHoursStep onNext={handleNext} onBack={handleBack} />;
-      case 8:
+      case 7:
         return <LifestyleAssessmentStep onNext={handleNext} onBack={handleBack} />;
-      case 9:
+      case 8:
         return <BalanceWheelStep onNext={handleNext} onBack={handleBack} />;
-      case 10:
+      case 9:
         return <GoalsStep onNext={handleNext} onBack={handleBack} />;
-      case 11:
+      case 10:
         return <AnalysisStep onNext={handleNext} />;
-      case 12:
+      case 11:
         return <ResultsStep onNext={handleNext} onBack={handleBack} />;
-      case 13:
+      case 12:
         return <AIPlanStep onNext={handleNext} onBack={handleBack} />;
       default:
         return <WelcomeStep onNext={handleNext} />;
     }
   };
 
-  // Determine if we should show the stepper header (only for diagnostic questionnaire steps 2-10)
-  const isQuestionnaireStep = currentStep >= 2 && currentStep <= 10;
+  // Determine if we should show the stepper header (only for diagnostic questionnaire steps 2-9)
+  const isQuestionnaireStep = currentStep >= 2 && currentStep <= 9;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between antialiased">
@@ -103,8 +100,8 @@ export default function Onboarding() {
           {isQuestionnaireStep && (
             <div className="mb-8 pb-6 border-b border-gray-100">
               <ProgressStepper
-                currentStep={currentStep - 1} // questionnaire steps are index 1 to 9
-                totalSteps={9} // 9 diagnostic steps
+                currentStep={currentStep - 1} // questionnaire steps are index 1 to 8
+                totalSteps={8} // 8 diagnostic steps
               />
             </div>
           )}
