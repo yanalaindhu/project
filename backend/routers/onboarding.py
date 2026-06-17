@@ -13,6 +13,12 @@ router = APIRouter(
 def save_onboarding(payload: OnboardingCreate):
 
     try:
+        # Delete existing onboarding responses to prevent duplicate completed/draft records
+        # and avoid "idx_onboarding_user_active" unique index violations
+        supabase.table("onboarding_responses").delete().eq("user_id", payload.user_id).execute()
+        # Also clean up profile analysis and plans to ensure consistency on restart
+        supabase.table("profile_analysis").delete().eq("user_id", payload.user_id).execute()
+        supabase.table("ai_plans").delete().eq("user_id", payload.user_id).execute()
 
         response = (
             supabase

@@ -45,4 +45,18 @@ dist-ssr
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-origin/main
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
+backend/.env
+frontend/.env
+
+# Node
+node_modules/
+dist/

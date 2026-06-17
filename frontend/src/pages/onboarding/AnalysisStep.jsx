@@ -13,7 +13,8 @@ export default function AnalysisStep({ onNext }) {
 
     const processOnboarding = async () => {
       try {
-        // Collect data payload
+        console.log('🚀 Starting onboarding analysis...');
+
         const payload = {
           lifeContext: storeState.lifeContext,
           emotionData: storeState.emotionData,
@@ -26,32 +27,55 @@ export default function AnalysisStep({ onNext }) {
           goals: storeState.goals,
         };
 
-        // Parallel mock API calls
-        const [resultsResponse, aiPlanResponse] = await Promise.all([
-          onboardingService.generateProfile(payload),
-          onboardingService.generateAIPlan(payload),
-          onboardingService.submitOnboarding(payload),
-        ]);
+        const startTime = Date.now();
+
+        // Generate profile first
+        const resultsResponse =
+          await onboardingService.generateProfile(payload);
+
+        console.log('✅ Profile generated:', resultsResponse);
+
+        // Generate AI plan second
+        const aiPlanResponse =
+          await onboardingService.generateAIPlan(payload);
+
+        console.log('✅ AI Plan generated:', aiPlanResponse);
+
+        // Ensure analysis animation shows for at least 3 seconds
+        const elapsedTime = Date.now() - startTime;
+
+        if (elapsedTime < 3000) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, 3000 - elapsedTime)
+          );
+        }
 
         if (active) {
           setResults(resultsResponse);
           setAIPlan(aiPlanResponse);
+
+          console.log('✅ Results stored in Zustand');
+          console.log('➡️ Moving to Results Step');
+
+          onNext();
         }
       } catch (err) {
-        console.error("Error generating onboarding analysis profiles", err);
+        console.error(
+          '❌ Error generating onboarding analysis:',
+          err
+        );
+
+        // Prevent infinite loading
+        if (active) {
+          onNext();
+        }
       }
     };
 
     processOnboarding();
 
-    // Enforce 3-second visual timing
-    const timer = setTimeout(() => {
-      onNext();
-    }, 3000);
-
     return () => {
       active = false;
-      clearTimeout(timer);
     };
   }, [onNext, setResults, setAIPlan]);
 

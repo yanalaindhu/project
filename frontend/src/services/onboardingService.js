@@ -1,247 +1,245 @@
-// Mock onboarding service simulating backend processing.
+import axios from 'axios';
+
+const BASE_URL = 'http://127.0.0.1:8000/api/onboarding';
+const DEFAULT_USER_ID = 'd2af0e65-c7d3-4e42-a2ee-8406f6648ef6';
+
+// Coordination promises to prevent race conditions in Promise.all
+let savePromise = null;
+let completePromise = null;
+
+// Helper to translate frontend camelCase keys to backend snake_case and format the dictionaries
+function translatePayload(data) {
+  const userId = localStorage.getItem('user_id') || DEFAULT_USER_ID;
+  
+  // Format life_context
+  const life_context = {
+    occupation: data.lifeContext?.occupation || '',
+    age: data.lifeContext?.age ? parseInt(data.lifeContext.age) : 21,
+    routine: data.lifeContext?.routine || ''
+  };
+
+  // Format emotion_data
+  const positive = ['motivated', 'calm', 'happy', 'excited', 'focused'];
+  const negative = ['anxious', 'sad', 'overwhelmed', 'tired', 'frustrated', 'stressed', 'angry'];
+  let moodOffset = 0;
+  (data.emotionData?.feelings || []).forEach(f => {
+    if (positive.includes(f)) moodOffset += 1;
+    if (negative.includes(f)) moodOffset -= 1;
+  });
+  const mood_score = Math.max(1, Math.min(10, 5 + moodOffset));
+  const emotion_data = {
+    feelings: data.emotionData?.feelings || [],
+    triggers: data.emotionData?.triggers || [],
+    mood_score: mood_score
+  };
+
+  // Format wellbeing_drivers
+  const wellbeing_drivers = {
+    drivers: data.wellbeingDrivers || []
+  };
+
+  // Format stress_data
+  const sd = data.stressData || {};
+  const stressSum = (sd.mentallyExhausted || 3) + 
+                    (sd.struggleToFocus || 3) + 
+                    (sd.overwhelmed || 3) + 
+                    (6 - (sd.wakeUpRefreshed || 3)) + 
+                    (6 - (sd.timeToRecover || 3)) + 
+                    (sd.emotionallyDrained || 3) + 
+                    (sd.difficultToDisconnect || 3) + 
+                    (6 - (sd.motivatedToStart || 3)) + 
+                    (sd.rushedOrBehind || 3);
+  const stress_level = Math.max(1, Math.min(10, Math.round(((stressSum - 9) / 36) * 9 + 1)));
+  const stress_data = {
+    ...sd,
+    stress_level: stress_level
+  };
+
+  // Format body_data
+  const sleepStr = data.bodyData?.sleep || '';
+  let sleep_hours = 7;
+  if (sleepStr.includes('8+')) sleep_hours = 8.5;
+  else if (sleepStr.includes('7-8')) sleep_hours = 7.5;
+  else if (sleepStr.includes('6-7')) sleep_hours = 6.5;
+  else if (sleepStr.includes('5-6')) sleep_hours = 5.5;
+  else if (sleepStr.includes('<5')) sleep_hours = 4.5;
+  
+  const body_data = {
+    ...data.bodyData,
+    sleep_hours: sleep_hours
+  };
+
+  // Format productive_window
+  const productive_window = data.productiveWindow || 'morning';
+
+  // Format lifestyle_data
+  const ld = data.lifestyleData || {};
+  const prodSum = (6 - (ld.procrastinate || 3)) + 
+                  (ld.focused || 3) + 
+                  (ld.habits || 3) + 
+                  (ld.timeManagement || 3) + 
+                  (ld.balance || 3);
+  const productivity_score = Math.max(1, Math.min(10, Math.round(((prodSum - 5) / 20) * 9 + 1)));
+  const lifestyle_data = {
+    ...ld,
+    productivity_score: productivity_score
+  };
+
+  return {
+    user_id: userId,
+    life_context,
+    emotion_data,
+    wellbeing_drivers,
+    stress_data,
+    body_data,
+    productive_window,
+    lifestyle_data,
+    balance_wheel: data.balanceWheel || {},
+    goals: data.goals || {}
+  };
+}
 
 export const onboardingService = {
   /**
-   * Submits the gathered onboarding data to the mock API server.
+   * Submits the gathered onboarding data to the API server as a draft.
    */
   submitOnboarding: async (data) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true, timestamp: new Date().toISOString() });
-      }, 1500);
-    });
+    // Reset coordination states for a new submit run
+    savePromise = null;
+    completePromise = null;
+
+    savePromise = (async () => {
+      const payload = translatePayload(data);
+      const response = await axios.post(`${BASE_URL}/save`, payload);
+      return response.data;
+    })();
+
+    return savePromise;
   },
 
   /**
    * Processes responses to output personalized scores, insights, risk metrics, and coaching text.
    */
   generateProfile: async (data) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const { stressData, bodyData, lifestyleData, balanceWheel, goals } = data;
+    // Ensure save step has completed first
+    if (!savePromise) {
+      savePromise = (async () => {
+        const payload = translatePayload(data);
+        const response = await axios.post(`${BASE_URL}/save`, payload);
+        return response.data;
+      })();
+    }
+    await savePromise;
 
-        // --- Calculate Mind Score (derived from stress questions) ---
-        // 9 questions, max points 45. Lower stress scores (reversed where necessary) = higher Mind Score
-        // reversed questions: wakeUpRefreshed, timeToRecover, motivatedToStart
-        let stressSum = 0;
-        if (stressData) {
-          Object.keys(stressData).forEach((key) => {
-            const val = stressData[key] || 3;
-            // if reversed, subtract from 6
-            if (['wakeUpRefreshed', 'timeToRecover', 'motivatedToStart'].includes(key)) {
-              stressSum += (6 - val);
-            } else {
-              stressSum += val;
-            }
-          });
-        } else {
-          stressSum = 27; // default average
-        }
-        // convert to 0-100 scale (where lower stress is better)
-        // stressSum ranges from 9 (best) to 45 (worst)
-        const mindScore = Math.max(10, Math.min(100, Math.round(((45 - stressSum) / 36) * 100)));
+    completePromise = (async () => {
+      const userId = localStorage.getItem('user_id') || DEFAULT_USER_ID;
+      const response = await axios.post(`${BASE_URL}/complete/${userId}`);
+      
+      const analysisList = response.data.analysis;
+      const analysis = (analysisList && analysisList.length > 0) ? analysisList[0] : {};
 
-        // --- Calculate Body Score ---
-        let bodyPoints = 50; // base
-        if (bodyData) {
-          // Sleep duration impact
-          if (bodyData.sleep === '7-8 Hours' || bodyData.sleep === '8+ Hours') bodyPoints += 20;
-          else if (bodyData.sleep === '6-7 Hours') bodyPoints += 10;
-          else bodyPoints -= 15;
+      // Transform backend response back to the frontend presentation schema
+      return {
+        mindScore: analysis.mind_score || 50,
+        bodyScore: analysis.body_score || 50,
+        lifestyleScore: analysis.lifestyle_score || 50,
+        overallScore: analysis.overall_score || 50,
+        burnoutRisk: (analysis.burnout_risk || "Low").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()),
+        coachSummary: analysis.coach_summary || "Your onboarding analysis is completed.",
+        strengths: analysis.strengths || ["Motivated"],
+        risks: analysis.risks || ["Stress Management"],
+        focusAreas: analysis.focus_areas || ["Sleep", "Consistency"],
+        productiveWindow: data.productiveWindow || "morning",
+        primaryGoal: data.goals?.primaryGoal || "reduce_stress"
+      };
+    })();
 
-          // Activity level impact
-          if (bodyData.activity === 'moderately_active' || bodyData.activity === 'very_active') bodyPoints += 20;
-          else if (bodyData.activity === 'lightly_active') bodyPoints += 10;
-          else bodyPoints -= 10;
-
-          // Hydration impact
-          const hyd = bodyData.hydration || 5;
-          bodyPoints += (hyd - 5) * 3;
-        }
-        const bodyScore = Math.max(15, Math.min(100, bodyPoints));
-
-        // --- Calculate Lifestyle Score ---
-        // 5 questions, max points 25. High focused, habits, timeManagement, balance + Low procrastinate = better
-        let lifestyleSum = 0;
-        if (lifestyleData) {
-          Object.keys(lifestyleData).forEach((key) => {
-            const val = lifestyleData[key] || 3;
-            if (key === 'procrastinate') {
-              lifestyleSum += (6 - val);
-            } else {
-              lifestyleSum += val;
-            }
-          });
-        } else {
-          lifestyleSum = 15;
-        }
-        const lifestyleScore = Math.max(10, Math.min(100, Math.round((lifestyleSum / 25) * 100)));
-
-        // --- Calculate Overall Balance Score ---
-        // Average of the 8 categories in balanceWheel
-        let balanceSum = 0;
-        let count = 0;
-        if (balanceWheel) {
-          Object.keys(balanceWheel).forEach((key) => {
-            balanceSum += balanceWheel[key] || 5;
-            count++;
-          });
-        }
-        const overallScore = count > 0 ? Math.round((balanceSum / (count * 10)) * 100) : 55;
-
-        // --- Burnout Risk Evaluation ---
-        let burnoutRisk = "Low";
-        const highStressCount = stressData 
-          ? Object.keys(stressData).filter(k => !['wakeUpRefreshed', 'timeToRecover', 'motivatedToStart'].includes(k) && stressData[k] >= 4).length
-          : 0;
-        if (highStressCount >= 5) {
-          burnoutRisk = "High";
-        } else if (highStressCount >= 2) {
-          burnoutRisk = "Moderate";
-        }
-
-        // --- AI Coach Insight Generator ---
-        let summaryText = "";
-        const roleStr = data.lifeContext?.occupation?.replace('_', ' ') || "individual";
-        const focusWindow = data.productiveWindow || "Morning";
-
-        if (burnoutRisk === "High") {
-          summaryText = `Based on your responses, you are currently experiencing high levels of stress and depletion as a ${roleStr}. Your Mind score of ${mindScore}% indicates significant cognitive fatigue. Our coaching recommendation is to prioritize emotional recovery and boundary setting immediately, leveraging your natural productive window in the ${focusWindow.replace('_', ' ')}.`;
-        } else if (burnoutRisk === "Moderate") {
-          summaryText = `Your assessment reveals moderate strain. While you maintain decent alignment in your daily habits, there is minor friction between work demands and recovery time. Cultivating consistent micro-habits during your peak ${focusWindow.replace('_', ' ')} will help stabilize your overall balance score.`;
-        } else {
-          summaryText = `You are maintaining a healthy baseline, with an overall balance score of ${overallScore}%. You have built solid foundational habits, particularly in managing day-to-day responsibilities. To reach peak performance, we will fine-tune your schedule around your most focused window in the ${focusWindow.replace('_', ' ')}.`;
-        }
-
-        // --- Generate Strengths & Risks ---
-        const strengths = [];
-        const risks = [];
-        const focusAreas = [];
-
-        // Strengths selection
-        if (lifestyleScore > 70) strengths.push("Strong executive control and habit execution");
-        if (bodyScore > 70) strengths.push("Excellent physiological recovery and physical energy");
-        if (mindScore > 70) strengths.push("High resilience and emotional stability under load");
-        if (strengths.length === 0) strengths.push("Eagerness to establish structured workflows");
-        strengths.push("Clear awareness of primary personal growth targets");
-
-        // Risks selection
-        if (burnoutRisk === "High") risks.push("Severe risk of burnout due to overcommitment");
-        if (bodyScore < 50) risks.push("Sleep deficits or physical inactivity impairing focus");
-        if (lifestyleScore < 50) risks.push("Habit fragmentation or chronic procrastination patterns");
-        if (risks.length === 0) risks.push("Potential misalignment between peak hours and chore timings");
-
-        // Focus Areas mapping
-        if (goals?.selectedGoals && goals.selectedGoals.length > 0) {
-          goals.selectedGoals.forEach(g => {
-            const formatted = g.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            focusAreas.push(formatted);
-          });
-        } else {
-          focusAreas.push("Stress Reduction", "Time Management", "Restoration");
-        }
-
-        resolve({
-          mindScore,
-          bodyScore,
-          lifestyleScore,
-          overallScore,
-          burnoutRisk,
-          coachSummary: summaryText,
-          strengths,
-          risks,
-          focusAreas,
-          productiveWindow: focusWindow.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          primaryGoal: goals?.primaryGoal ? goals.primaryGoal.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : "Balance Plan"
-        });
-      }, 1000);
-    });
+    return completePromise;
   },
 
   /**
-   * Creates a high-fidelity personalized schedule based on onboarding answers.
+   * Creates a personalized schedule based on onboarding profile.
    */
   generateAIPlan: async (data) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const prod = data.productiveWindow || 'morning';
-        const sleepOpt = data.bodyData?.sleep || '7-8 Hours';
-        
-        let wakeTime = "06:30 AM";
-        let sleepTarget = "10:30 PM";
-        
-        if (prod === 'early_morning') {
-          wakeTime = "05:00 AM";
-          sleepTarget = "09:30 PM";
-        } else if (prod === 'late_night') {
-          wakeTime = "08:30 AM";
-          sleepTarget = "12:30 AM";
-        } else if (prod === 'evening') {
-          wakeTime = "07:30 AM";
-          sleepTarget = "11:30 PM";
-        }
+    // Ensure save and complete steps have completed first to establish the profile
+    if (!savePromise) {
+      savePromise = (async () => {
+        const payload = translatePayload(data);
+        const response = await axios.post(`${BASE_URL}/save`, payload);
+        return response.data;
+      })();
+    }
+    await savePromise;
 
-        // Configure deep work based on peak window
-        let morningTask = "Focus Session: Task Prioritization & Admin";
-        let afternoonTask = "Core Execution: Creative & Desk Tasks";
-        let eveningTask = "Leisure, Reading, and Low-energy Chores";
-        let nightTask = "Wind-down routine & screen-off preparation";
+    if (!completePromise) {
+      completePromise = (async () => {
+        const userId = localStorage.getItem('user_id') || DEFAULT_USER_ID;
+        const response = await axios.post(`${BASE_URL}/complete/${userId}`);
+        const analysisList = response.data.analysis;
+        return (analysisList && analysisList.length > 0) ? analysisList[0] : {};
+      })();
+    }
+    await completePromise;
 
-        if (prod === 'early_morning') {
-          morningTask = "⚡ Peak Deep Work: High Cognitive Challenge Tasks";
-        } else if (prod === 'morning') {
-          morningTask = "⚡ Peak Deep Work: Strategy, Coding, or Writing";
-        } else if (prod === 'afternoon') {
-          afternoonTask = "⚡ Peak Deep Work: Hard Technical Tasks & Coding";
-        } else if (prod === 'evening') {
-          eveningTask = "⚡ Peak Deep Work: Creative Brainstorming & Planning";
-        } else if (prod === 'late_night') {
-          nightTask = "⚡ Peak Deep Work: Solitary Deep Writing/Research";
-        }
+    const userId = localStorage.getItem('user_id') || DEFAULT_USER_ID;
+    const response = await axios.post(`${BASE_URL}/generate-plan/${userId}`);
+    
+    const planList = response.data.plan;
+    const plan = (planList && planList.length > 0) ? planList[0] : {};
 
-        resolve({
-          wakeTime,
-          sleepTarget,
-          schedule: [
-            {
-              period: "Morning",
-              time: "06:00 AM - 12:00 PM",
-              items: [
-                { time: wakeTime, label: "Wake up & immediate hydration (1 glass)" },
-                { time: "07:00 AM", label: "Mindfulness block: 10 mins box breathing", type: "mindfulness" },
-                { time: "08:30 AM", label: morningTask, type: "work" },
-              ]
-            },
-            {
-              period: "Afternoon",
-              time: "12:00 PM - 05:00 PM",
-              items: [
-                { time: "12:30 PM", label: "Nutritious protein lunch & 15-minute unplugged walk", type: "break" },
-                { time: "02:00 PM", label: afternoonTask, type: "work" },
-                { time: "04:30 PM", label: "Hydration alert & dynamic mobility stretching" }
-              ]
-            },
-            {
-              period: "Evening",
-              time: "05:00 PM - 09:00 PM",
-              items: [
-                { time: "05:30 PM", label: "Exercise Block: 30-minute functional strength/cardio", type: "exercise" },
-                { time: "07:00 PM", label: "Balanced dinner & light social connection", type: "break" },
-                { time: "08:15 PM", label: eveningTask },
-              ]
-            },
-            {
-              period: "Night",
-              time: "09:00 PM - Wake",
-              items: [
-                { time: "09:30 PM", label: "Screen sunset: digital devices disconnected" },
-                { time: "10:00 PM", label: nightTask },
-                { time: sleepTarget, label: `Bedtime target: aiming for ${sleepOpt} sleep`, type: "sleep" }
-              ]
-            }
-          ]
-        });
-      }, 800);
+    // Transform backend schedule tasks to frontend visual structures
+    const backendSchedule = plan.schedule || [];
+    
+    // Group tasks by period matching the frontend template expectation
+    const periods = {
+      "Morning": { time: "06:00 AM - 12:00 PM", items: [] },
+      "Afternoon": { time: "12:00 PM - 05:00 PM", items: [] },
+      "Evening": { time: "05:00 PM - 09:00 PM", items: [] },
+      "Night": { time: "09:00 PM - Wake", items: [] }
+    };
+
+    backendSchedule.forEach(task => {
+      // Determine period based on task time
+      const timeStr = task.time || "09:00";
+      const hour = parseInt(timeStr.split(':')[0]);
+      
+      let periodName = "Afternoon";
+      if (hour < 12) periodName = "Morning";
+      else if (hour < 17) periodName = "Afternoon";
+      else if (hour < 21) periodName = "Evening";
+      else periodName = "Night";
+
+      // Format time to 12-hour AM/PM
+      let formattedTime = "09:00 AM";
+      try {
+        const parts = timeStr.split(':');
+        const h = parseInt(parts[0]);
+        const m = parts[1] || "00";
+        const suffix = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        formattedTime = `${h12.toString().padStart(2, '0')}:${m} ${suffix}`;
+      } catch (e) {
+        formattedTime = timeStr;
+      }
+
+      periods[periodName].items.push({
+        time: formattedTime,
+        label: task.task,
+        type: task.category ? task.category.toLowerCase() : "work"
+      });
     });
+
+    // Construct final visual schedule array
+    const scheduleArray = Object.keys(periods).map(period => ({
+      period,
+      time: periods[period].time,
+      items: periods[period].items
+    }));
+
+    return {
+      wakeTime: plan.wake_time || "06:00 AM",
+      sleepTarget: plan.sleep_target || "10:00 PM",
+      schedule: scheduleArray
+    };
   }
 };
