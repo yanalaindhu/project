@@ -4,7 +4,7 @@ const initialStoreState = {
   currentStep: 1,
   userProfile: {},
   lifeContext: {
-    role: '',
+    occupation: '',
     age: '',
     routine: '',
   },
@@ -60,7 +60,7 @@ const initialStoreState = {
 export const useOnboardingStore = create((set) => ({
   ...initialStoreState,
 
-  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 13) })),
+  nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 12) })),
   prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
   setStep: (step) => set({ currentStep: step }),
 

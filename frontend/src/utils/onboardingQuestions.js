@@ -1,6 +1,6 @@
 export const LIFE_CONTEXT_QUESTIONS = {
-  role: {
-    question: "What best describes you?",
+  occupation: {
+    question: "What is your occupation?",
     options: [
       { id: "student", label: "Student", desc: "Currently studying or pursuing academics" },
       { id: "working_professional", label: "Working Professional", desc: "Corporate, trade, or salaried employee" },
@@ -8,15 +8,6 @@ export const LIFE_CONTEXT_QUESTIONS = {
       { id: "freelancer", label: "Freelancer", desc: "Self-employed or contract consultant" },
       { id: "homemaker", label: "Homemaker", desc: "Managing household and family needs" },
       { id: "other", label: "Other", desc: "None of the above match my daily focus" },
-    ]
-  },
-  ageGroup: {
-    question: "Select your age group",
-    options: [
-      { id: "18-24", label: "18-24" },
-      { id: "25-34", label: "25-34" },
-      { id: "35-44", label: "35-44" },
-      { id: "45+", label: "45+" },
     ]
   },
   dailyRoutine: {
