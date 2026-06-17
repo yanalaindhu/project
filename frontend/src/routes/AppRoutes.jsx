@@ -1,12 +1,14 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Onboarding from '../pages/onboarding/Onboarding';
+import Chatbot from '../features/chatbot/Chatbot';
 import { useOnboardingStore } from '../store/onboardingStore';
-import { Sparkles, Compass, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Sparkles, Compass, CheckCircle2, RefreshCw, MessageSquare } from 'lucide-react';
 
 // Simplified high-fidelity dashboard placeholder
 function DashboardPlaceholder() {
   const { results, resetOnboarding } = useOnboardingStore();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between antialiased">
@@ -18,10 +20,20 @@ function DashboardPlaceholder() {
             </div>
             <span className="text-xl font-black text-text-primary tracking-tight">TRIVARNA</span>
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-success-green bg-green-50 border border-green-100 px-3 py-1 rounded-full flex items-center">
-            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-            Active Plan Sync
-          </span>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => navigate('/chatbot')}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-primary-purple hover:bg-secondary-purple text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>AI Chatbot</span>
+            </button>
+            <span className="text-xs font-bold uppercase tracking-widest text-success-green bg-green-50 border border-green-100 px-3 py-1 rounded-full flex items-center">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              Active Plan Sync
+            </span>
+          </div>
         </div>
       </header>
 
@@ -60,7 +72,7 @@ function DashboardPlaceholder() {
             <button
               onClick={() => {
                 resetOnboarding();
-                window.location.href = '/onboarding';
+                navigate('/onboarding');
               }}
               className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl border border-gray-200 text-text-secondary hover:bg-gray-50 font-bold text-sm transition-all"
             >
@@ -83,6 +95,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/dashboard" element={<DashboardPlaceholder />} />
+      <Route path="/chatbot" element={<Chatbot />} />
       <Route path="*" element={<Navigate to="/onboarding" replace />} />
     </Routes>
   );
