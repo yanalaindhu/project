@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 
 import Home from "../pages/home";
 import Login from "../pages/login";
@@ -18,6 +19,40 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import Dashboard from "../pages/dashboard";
 
 export default function AppRoutes() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token=")) {
+      try {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        
+        if (accessToken) {
+          localStorage.setItem("token", accessToken);
+          if (refreshToken) {
+            localStorage.setItem("refresh_token", refreshToken);
+          }
+          
+          const payloadBase64 = accessToken.split(".")[1];
+          const payloadDecoded = JSON.parse(atob(payloadBase64));
+          
+          localStorage.setItem("userId", payloadDecoded.sub);
+          localStorage.setItem("email", payloadDecoded.email);
+          
+          // Clear hash in URL
+          window.history.replaceState(null, "", window.location.pathname);
+          
+          // Navigate to dashboard
+          navigate("/dashboard");
+        }
+      } catch (e) {
+        console.error("Failed to parse OAuth tokens:", e);
+      }
+    }
+  }, [navigate]);
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
