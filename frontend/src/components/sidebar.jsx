@@ -15,9 +15,41 @@ import {
   LayoutDashboard
 } from "lucide-react";
 
+import { getProfile } from "../services/profileService";
+
 export default function Sidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
+
+  const [profileData, setProfileData] = React.useState({
+    fullName: localStorage.getItem("trivarna_full_name") || "Explorer",
+    avatarUrl: localStorage.getItem("trivarna_avatar_url") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+  });
+
+  React.useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+
+    getProfile(userId)
+      .then((data) => {
+        if (data.success && data.profile) {
+          const name = data.profile.full_name || "Explorer";
+          localStorage.setItem("trivarna_full_name", name);
+          
+          let avatar = localStorage.getItem("trivarna_avatar_url");
+          if (!avatar) {
+            avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80";
+            localStorage.setItem("trivarna_avatar_url", avatar);
+          }
+
+          setProfileData({
+            fullName: name,
+            avatarUrl: avatar,
+          });
+        }
+      })
+      .catch((err) => console.error("Error loading sidebar profile:", err));
+  }, []);
 
   const menuGroups = [
     {
@@ -102,12 +134,12 @@ export default function Sidebar() {
       {/* User Quick Info */}
       <div className="border-t border-gray-100 pt-4 mt-4 flex items-center space-x-3 px-2">
         <img
-          src="https://i.pravatar.cc/40"
-          className="w-9 h-9 rounded-full ring-2 ring-purple-100"
+          src={profileData.avatarUrl}
+          className="w-9 h-9 rounded-full ring-2 ring-purple-100 object-cover"
           alt="avatar"
         />
         <div className="overflow-hidden">
-          <p className="text-xs font-bold text-gray-800 truncate">Aarya Sharma</p>
+          <p className="text-xs font-bold text-gray-800 truncate">{profileData.fullName}</p>
           <p className="text-[10px] text-gray-400 truncate">{localStorage.getItem("email") || "aarya@trivarna.com"}</p>
         </div>
       </div>

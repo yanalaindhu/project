@@ -2,7 +2,17 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/sidebar";
 import { getProfile, updateProfile } from "../services/profileService";
-import { User, Award, Flame, Edit3, Save, Loader2, AlertTriangle } from "lucide-react";
+import { useOnboardingStore } from "../store/onboardingStore";
+import { User, Award, Flame, Edit3, Save, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+
+const AVATAR_PRESETS = [
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80", // female 1
+  "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80", // male 1
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80", // female 2
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80", // male 2
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80", // female 3
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80"  // male 3
+];
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -11,7 +21,10 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [profileName, setProfileName] = useState("Explorer");
   const [occupation, setOccupation] = useState("Product Designer");
-  const [age, setAge] = useState("25-34");
+  const [age, setAge] = useState(28);
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    localStorage.getItem("trivarna_avatar_url") || AVATAR_PRESETS[0]
+  );
   const [stats, setStats] = useState({ active_days: 0, current_streak: 0, badges_unlocked: 0 });
   const [achievements, setAchievements] = useState([]);
   const [error, setError] = useState(null);
@@ -31,7 +44,11 @@ export default function Profile() {
       if (data.success) {
         setProfileName(data.profile.full_name || "Explorer");
         setOccupation(data.profile.occupation || "Product Designer");
-        setAge(data.profile.age || "25-34");
+        setAge(data.profile.age || 28);
+        const avatar = data.profile.avatar_url || AVATAR_PRESETS[0];
+        setSelectedAvatar(avatar);
+        localStorage.setItem("trivarna_avatar_url", avatar);
+        localStorage.setItem("trivarna_full_name", data.profile.full_name || "Explorer");
         setStats(data.stats || { active_days: 0, current_streak: 0, badges_unlocked: 0 });
         setAchievements(data.achievements || []);
       }
@@ -54,9 +71,12 @@ export default function Profile() {
       const res = await updateProfile(userId, {
         full_name: profileName,
         occupation,
-        age
+        age,
+        avatar_url: selectedAvatar
       });
       if (res.success) {
+        localStorage.setItem("trivarna_avatar_url", selectedAvatar);
+        localStorage.setItem("trivarna_full_name", profileName);
         setEditing(false);
         fetchProfile();
       }
@@ -119,13 +139,31 @@ export default function Profile() {
             <div className="bg-white rounded-3xl p-6 border border-gray-100/50 shadow-sm flex flex-col justify-between items-center text-center h-fit">
               <div className="w-full flex flex-col items-center">
                 <img
-                  src="https://i.pravatar.cc/120"
-                  className="w-24 h-24 rounded-full ring-4 ring-purple-100 mb-4 shadow-sm"
+                  src={selectedAvatar}
+                  className="w-24 h-24 rounded-full ring-4 ring-purple-100 mb-4 shadow-sm object-cover"
                   alt="profile"
                 />
 
                 {editing ? (
                   <div className="w-full space-y-3 mt-2">
+                    {/* Avatar selection grid */}
+                    <div className="w-full mb-3 text-left">
+                      <label className="text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider block">Choose Avatar</label>
+                      <div className="grid grid-cols-6 gap-2">
+                        {AVATAR_PRESETS.map((url, idx) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            onClick={() => setSelectedAvatar(url)}
+                            className={`w-8 h-8 rounded-full cursor-pointer ring-2 object-cover transition-all ${
+                              selectedAvatar === url ? "ring-purple-600 scale-105" : "ring-transparent hover:ring-purple-200"
+                            }`}
+                            alt={`preset-${idx}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="flex flex-col text-left">
                       <label className="text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Full Name</label>
                       <input
@@ -147,13 +185,13 @@ export default function Profile() {
                       />
                     </div>
                     <div className="flex flex-col text-left">
-                      <label className="text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Age Group</label>
+                      <label className="text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Age</label>
                       <input
-                        type="text"
+                        type="number"
                         value={age}
-                        placeholder="e.g. 25-34"
+                        placeholder="e.g. 28"
                         onChange={(e) => setAge(e.target.value)}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-purple-500 text-gray-500"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-purple-500 text-gray-500 font-bold"
                         required
                       />
                     </div>
@@ -162,7 +200,7 @@ export default function Profile() {
                   <>
                     <h2 className="text-xl font-bold text-gray-800">{profileName}</h2>
                     <p className="text-xs text-gray-500 mt-1">{occupation}</p>
-                    <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Age bracket: {age}</p>
+                    <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Age: {age} years old</p>
                   </>
                 )}
 
@@ -181,13 +219,28 @@ export default function Profile() {
                     <span>Save Changes</span>
                   </button>
                 ) : (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="flex items-center justify-center gap-2 border border-purple-200 hover:bg-purple-50 text-purple-600 text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer w-full"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    <span>Edit Profile Details</span>
-                  </button>
+                  <div className="space-y-2.5 w-full">
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="flex items-center justify-center gap-2 border border-purple-200 hover:bg-purple-50 text-purple-600 text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer w-full"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>Edit Profile Details</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to retake the onboarding assessment? This will reset your current answers and generate new AI plans.")) {
+                          useOnboardingStore.getState().resetOnboarding();
+                          navigate("/onboarding");
+                        }
+                      }}
+                      className="flex items-center justify-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer w-full"
+                    >
+                      <RefreshCw className="w-4 h-4 text-gray-400" />
+                      <span>Retake Diagnostic Assessment</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

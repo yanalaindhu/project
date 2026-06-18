@@ -79,12 +79,84 @@ export default function AnalysisStep({ onNext, onBack }) {
         hydration: storeState.bodyData?.hydration || 8
       };
 
+      // Helper to group the flat schedule tasks into periods for the AIPlanStep component
+      const groupScheduleByPeriod = (flatSchedule) => {
+        const periods = [
+          { period: "Morning", time: "06:00 AM - 12:00 PM", items: [] },
+          { period: "Afternoon", time: "12:00 PM - 05:00 PM", items: [] },
+          { period: "Evening", time: "05:00 PM - 09:00 PM", items: [] },
+          { period: "Night", time: "09:00 PM - 06:00 AM", items: [] }
+        ];
+
+        if (!Array.isArray(flatSchedule)) return periods;
+
+        flatSchedule.forEach(task => {
+          const timeStr = task.time || "08:00";
+          let hour = 8;
+          
+          const match = timeStr.match(/^(\d+):(\d+)/);
+          if (match) {
+            hour = parseInt(match[1]);
+          }
+          
+          if (timeStr.toUpperCase().includes("PM") && hour < 12) {
+            hour += 12;
+          }
+          if (timeStr.toUpperCase().includes("AM") && hour === 12) {
+            hour = 0;
+          }
+
+          let targetPeriodName = "Morning";
+          if (hour >= 5 && hour < 12) {
+            targetPeriodName = "Morning";
+          } else if (hour >= 12 && hour < 17) {
+            targetPeriodName = "Afternoon";
+          } else if (hour >= 17 && hour < 21) {
+            targetPeriodName = "Evening";
+          } else {
+            targetPeriodName = "Night";
+          }
+
+          let itemType = "break";
+          const cat = String(task.category || "").toLowerCase();
+          if (cat.includes("body") || cat.includes("exercise")) {
+            itemType = "exercise";
+          } else if (cat.includes("mind") || cat.includes("meditation") || cat.includes("reading")) {
+            itemType = "mindfulness";
+          } else if (cat.includes("lifestyle") || cat.includes("work")) {
+            itemType = "work";
+          }
+
+          let displayTime = timeStr;
+          if (match) {
+            const h = parseInt(match[1]);
+            const m = match[2];
+            const ampm = h >= 12 ? "PM" : "AM";
+            const h12 = h % 12 || 12;
+            displayTime = `${String(h12).padStart(2, '0')}:${m} ${ampm}`;
+          }
+
+          const item = {
+            time: displayTime,
+            label: task.task || "Activity",
+            type: itemType
+          };
+
+          const targetPeriod = periods.find(p => p.period === targetPeriodName);
+          if (targetPeriod) {
+            targetPeriod.items.push(item);
+          }
+        });
+
+        return periods.filter(p => p.items.length > 0);
+      };
+
       // Normalize AI schedule plan from snake_case to camelCase
       const plan = aiPlanResponse.plan?.[0] || {};
       const normalizedAIPlan = {
         wakeTime: plan.wake_time || "06:00 AM",
         sleepTarget: plan.sleep_target || "10:00 PM",
-        schedule: plan.schedule || []
+        schedule: groupScheduleByPeriod(plan.schedule || [])
       };
 
       setResults(normalizedResults);

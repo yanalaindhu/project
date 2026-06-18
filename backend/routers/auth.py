@@ -28,7 +28,8 @@ async def signup(payload: SignupRequest):
         supabase.table("profiles").insert(
             {
                 "id": response.user.id,
-                "full_name": payload.full_name
+                "full_name": payload.full_name,
+                "email": payload.email
             }
         ).execute()
 

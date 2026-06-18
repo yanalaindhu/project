@@ -138,6 +138,23 @@ def complete_onboarding(user_id: str):
             body_score
         )
 
+        # Update profiles table with age and occupation from life_context
+        life_context = onboarding.get("life_context") or {}
+        profile_update = {}
+        if "age" in life_context and life_context["age"] != "":
+            try:
+                profile_update["age"] = int(life_context["age"])
+            except (ValueError, TypeError):
+                pass
+        if "occupation" in life_context and life_context["occupation"]:
+            profile_update["occupation"] = str(life_context["occupation"])
+
+        if profile_update:
+            try:
+                supabase.table("profiles").update(profile_update).eq("id", user_id).execute()
+            except Exception as e:
+                print(f"Warning: Failed to update profiles table: {e}")
+
         # Save Analysis
 
         analysis = (

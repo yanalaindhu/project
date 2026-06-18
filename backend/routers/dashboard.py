@@ -54,11 +54,24 @@ async def get_dashboard(user_id: str):
             .execute()
         )
 
+        profile_data = latest_profile.data[0] if latest_profile.data else {}
+
+        # Fetch basic profiles info (name, age, occupation)
+        user_profile_res = (
+            supabase
+            .table("profiles")
+            .select("*")
+            .eq("id", user_id)
+            .execute()
+        )
+        if user_profile_res.data:
+            user_prof = user_profile_res.data[0]
+            for key, val in user_prof.items():
+                if val is not None or key not in profile_data:
+                    profile_data[key] = val
+
         return {
-            "profile":
-                latest_profile.data[0]
-                if latest_profile.data
-                else None,
+            "profile": profile_data if profile_data else None,
 
             "plan":
                 latest_plan.data[0]

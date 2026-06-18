@@ -5,3 +5,4 @@ class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     age: Optional[str] = None
     occupation: Optional[str] = None
+    avatar_url: Optional[str] = None

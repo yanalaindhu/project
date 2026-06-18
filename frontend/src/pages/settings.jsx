@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/sidebar";
 import { Settings as SettingsIcon, Bell, Lock, Smartphone, RefreshCw, LogOut, Globe, Moon } from "lucide-react";
+import { useOnboardingStore } from "../store/onboardingStore";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const resetOnboarding = useOnboardingStore((state) => state.resetOnboarding);
 
   const [notification, setNotification] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -115,6 +117,32 @@ export default function Settings() {
                   }`}></div>
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Diagnostic & Onboarding Group */}
+          <div>
+            <h3 className="font-extrabold text-gray-800 text-sm mb-4 border-b border-gray-100 pb-2 flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-purple-600" />
+              Onboarding & Diagnostics
+            </h3>
+            
+            <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100/50">
+              <div>
+                <p className="font-bold text-gray-800 text-xs">Reset Onboarding Data</p>
+                <p className="text-[10px] text-gray-400">Retake the full diagnostic assessment questionnaire to re-align your wellness scores and AI plan.</p>
+              </div>
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to retake the onboarding assessment? This will update your wellness scores and generate a new AI routine schedule.")) {
+                    resetOnboarding();
+                    navigate("/onboarding");
+                  }
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-750 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
+              >
+                Retake Assessment
+              </button>
             </div>
           </div>
 

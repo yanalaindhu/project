@@ -125,8 +125,9 @@ def get_profile(user_id: str):
             "success": True,
             "profile": {
                 "full_name": profile.get("full_name") or "Explorer",
-                "age": profile.get("age") or "25-34",
-                "occupation": profile.get("occupation") or "Product Designer"
+                "age": profile.get("age") or 28,
+                "occupation": profile.get("occupation") or "Product Designer",
+                "avatar_url": profile.get("avatar_url") or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
             },
             "stats": {
                 "active_days": len(checkins),
@@ -145,9 +146,17 @@ def update_profile(user_id: str, payload: ProfileUpdate):
         if payload.full_name is not None:
             update_data["full_name"] = payload.full_name
         if payload.age is not None:
-            update_data["age"] = payload.age
+            if payload.age == "":
+                update_data["age"] = None
+            else:
+                try:
+                    update_data["age"] = int(payload.age)
+                except (ValueError, TypeError):
+                    pass
         if payload.occupation is not None:
             update_data["occupation"] = payload.occupation
+        if payload.avatar_url is not None:
+            update_data["avatar_url"] = payload.avatar_url
             
         response = (
             supabase

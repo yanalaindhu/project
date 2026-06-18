@@ -267,8 +267,8 @@ export default function Dashboard() {
                 {formattedDate}
               </span>
               <img
-                src="https://i.pravatar.cc/40"
-                className="w-10 h-10 rounded-full ring-2 ring-purple-100 shadow-sm"
+                src={localStorage.getItem("trivarna_avatar_url") || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"}
+                className="w-10 h-10 rounded-full ring-2 ring-purple-100 shadow-sm object-cover"
                 alt="avatar"
               />
             </div>
